@@ -10,17 +10,32 @@ using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace QuickSend.Network {
+namespace QuickSend.Network.Udp {
     internal class UdpHighPerfServer {
         private readonly Socket _socket;
         private readonly ArrayPool<byte> arrayPool = ArrayPool<byte>.Shared;
         private bool _isRunning = false;
         private readonly Channel<UdpInfo> channel = Channel.CreateUnbounded<UdpInfo>();
+        private readonly int port;
+
+        public int Port => port;
+
         public event EventHandler<UdpInfo>? OnReceived;
         public UdpHighPerfServer(int port) {
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            _socket.Bind(new IPEndPoint(IPAddress.Any, port));
+            bool success = false;
+            while (!success) {
+                try {
+                    _socket.Bind(new IPEndPoint(IPAddress.Any, port));
+                    success = true;
+                } catch (SocketException) {
+                    // 端口已占用，尝试下一个
+                    port++;
+                }
+            }
             _socket.DontFragment = true;
+            _socket.EnableBroadcast = true;
+            this.port = port;
         }
 
         public void Start() {
@@ -56,8 +71,8 @@ namespace QuickSend.Network {
         }
 
         // 异步发送（使用原始内存块）
-        public async ValueTask<int> SendAsync(Memory<byte> data, EndPoint remoteEP) {
-            return await _socket.SendToAsync(data, SocketFlags.None, remoteEP);
+        public ValueTask<int> SendAsync(Memory<byte> data, EndPoint remoteEP) {
+            return _socket.SendToAsync(data, SocketFlags.None, remoteEP);
         }
 
         public void Dispose() {

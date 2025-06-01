@@ -2,76 +2,52 @@
 <ContentPage
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:data="clr-namespace:QuickSend.Data"
     x:Class="QuickSend.MainPage">
 
     <Grid
         Padding="30,0,30,30"
-        RowDefinitions="Auto,30,*">
-
-        <Button
-            x:Name="QuickSendButton"
-            Text="选择文件分享"
-            SemanticProperties.Hint="点击按钮打开文件立即发送"
-            Clicked="QuickSendButton_Clicked"
-            HorizontalOptions="Fill" />
+        RowDefinitions="Auto,15,Auto,15,*">
+        <HorizontalStackLayout
+            Spacing="10">
+            <Label
+                Text="当前设备："
+                VerticalOptions="Center"></Label>
+            <Editor
+                x:Name="DeviceNameEditor"
+                WidthRequest="300"
+                TextChanged="DeviceNameEditor_TextChanged"></Editor>
+            <Button
+                x:Name="QuickSendButton"
+                Text="选择文件分享"
+                SemanticProperties.Hint="点击按钮打开文件立即发送"
+                Clicked="QuickSendButton_Clicked"
+                HorizontalOptions="Fill" />
+        </HorizontalStackLayout>
+        <Label
+            Grid.Row="2"
+            Text="切换开关允许对方接受自己分享的文件"></Label>
         <ScrollView
-            Grid.Row="2">
-            <TableView
-                x:Name="ConnectionTableView">
-                <TableRoot>
-                    <TableSection Title="切换开关允许对方接受自己分享的文件">
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                        <SwitchCell
-                            Text="gg"></SwitchCell>
-                    </TableSection>
-                </TableRoot>
+            Grid.Row="4">
+            <CollectionView
+                x:Name="ClientCollectionView">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate
+                        x:DataType="data:ClientInfo">
+                        <Grid
+                            ColumnDefinitions="*,auto">
+                            <Label
+                                Text="{Binding Name}"
+                                FontSize="16"
+                                VerticalOptions="Center" />
 
-            </TableView>
+                            <Switch
+                                Grid.Column="1"
+                                IsToggled="{Binding Trusted, Mode=TwoWay}"></Switch>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
         </ScrollView>
 
     </Grid>

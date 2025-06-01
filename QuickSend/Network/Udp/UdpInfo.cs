@@ -5,7 +5,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace QuickSend.Network {
+namespace QuickSend.Network.Udp {
     internal class UdpInfo(byte[] data, int dataLength, EndPoint remoteEndPoint) {
         private readonly byte[] data = data;
         private readonly int dataLength = dataLength;
