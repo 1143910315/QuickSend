@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Net;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -19,6 +20,7 @@ namespace QuickSend {
             ClientCollectionView.ItemsSource = HostList;
             PacketHandlerRegistry.Initialize();
             PacketHandlerRegistry.Subscribe<HelloPacket, IPEndPoint>(HelloPacketProcessor);
+            PacketHandlerRegistry.Subscribe<ConfirmPacket, IPEndPoint>(ConfirmPacketProcessor);
             DeviceNameEditor.Text = Preferences.Get("DeviceID", $"{DeviceInfo.Current.Name} - {DeviceInfo.Current.Idiom}");
             timer = new() {
                 Interval = 3000,
@@ -30,21 +32,26 @@ namespace QuickSend {
             udpHighPerfServer.Start();
         }
 
-        private void HelloPacketProcessor(HelloPacket packet, IPEndPoint? point) {
-            if (packet.Name == DeviceNameEditor.Text) {
-
-            } else {
-                ClientInfo? clientInfo = HostList.FirstOrDefault(x => x.IpEndPoint == point);
-                if (clientInfo == null) {
-                    clientInfo = new ClientInfo() { IpEndPoint = point, Name = packet.Name };
-                    HostList.Add(clientInfo);
-                }
+        private void ConfirmPacketProcessor(ConfirmPacket packet, IPEndPoint? point) {
+            ClientInfo? clientInfo;
+            lock (HostList) {
+                clientInfo = HostList.FirstOrDefault(x => x.IpEndPoint == point);
             }
+            clientInfo?.RemoveConfirmAction(packet.Id, packet.IsConfirmed);
         }
 
-        private void SwitchCell_OnChanged(object? sender, ToggledEventArgs e) {
-            if (sender is SwitchCell switchCell) {
-
+        private void HelloPacketProcessor(HelloPacket packet, IPEndPoint? point) {
+            if (point != null) {
+                if (packet.Name == DeviceNameEditor.Text) {
+                } else {
+                    lock (HostList) {
+                        ClientInfo? clientInfo = HostList.FirstOrDefault(x => x.IpEndPoint == point);
+                        if (clientInfo == null) {
+                            clientInfo = new ClientInfo(point) { Name = packet.Name };
+                            HostList.Add(clientInfo);
+                        }
+                    }
+                }
             }
         }
 
@@ -59,9 +66,37 @@ namespace QuickSend {
         private async void QuickSendButton_Clicked(object sender, EventArgs e) {
             FileResult? fileResult = await FilePicker.PickAsync().ConfigureAwait(false);
             if (fileResult != null) {
-                using var stream = await fileResult.OpenReadAsync().ConfigureAwait(false);
-                byte[] data = new byte[1024];
-                int dataLength = await stream.ReadAsync(data).ConfigureAwait(false);
+                IEnumerable<Tuple<ClientInfo, CancellationTokenSource, int>> sendClientInfo;
+                lock (HostList) {
+                    sendClientInfo = HostList
+                    .AsParallel()
+                    .Where(x => x.Trusted)
+                    .Select(x => {
+                        CancellationTokenSource cancellationTokenSource = new();
+                        return Tuple.Create(x, cancellationTokenSource, x.AddConfirmAction(isConfirmed => { cancellationTokenSource.Cancel(); }));
+                    })
+                    .AsEnumerable();
+                }
+                using Stream stream = await fileResult.OpenReadAsync().ConfigureAwait(false);
+                long fileLength = stream.Length;
+                using IncrementalHash incrementalHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                int bytesRead;
+                byte[] buffer = new byte[1024];
+                do {
+                    bytesRead = await stream.ReadAsync(buffer).ConfigureAwait(false);
+                    incrementalHash.AppendData(buffer, 0, bytesRead);
+                } while (bytesRead != 0);
+                byte[] hash = incrementalHash.GetCurrentHash();
+                await Parallel.ForEachAsync(sendClientInfo, async (tuple, token) => {
+                    try {
+                        while (!tuple.Item2.IsCancellationRequested) {
+                            await udpHighPerfServer.SendAsync(PacketHandlerRegistry.Encode(new PreparePacket(fileLength, fileResult.FileName)), tuple.Item1.IpEndPoint).ConfigureAwait(false);
+                            await Task.Delay(5000, token).ConfigureAwait(false);
+                        }
+                    } finally {
+                    }
+                });
+                await Task.Run(() => { }).ConfigureAwait(false);
             }
         }
 

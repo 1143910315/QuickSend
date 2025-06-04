@@ -23,10 +23,12 @@ namespace QuickSend.Network.Udp {
         public event EventHandler<UdpInfo>? OnReceived;
         public UdpHighPerfServer(int port) {
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            //_socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
             bool success = false;
             while (!success) {
                 try {
                     _socket.Bind(new IPEndPoint(IPAddress.Any, port));
+                    //_socket.Bind(new IPEndPoint(IPAddress.IPv6Any, port));
                     success = true;
                 } catch (SocketException) {
                     // 端口已占用，尝试下一个
@@ -54,6 +56,11 @@ namespace QuickSend.Network.Udp {
                     SocketFlags.None,
                     new IPEndPoint(IPAddress.Any, 0)
                 ).ConfigureAwait(false);
+                //var result = await _socket.ReceiveFromAsync(
+                //    buffer,
+                //    SocketFlags.None,
+                //    new IPEndPoint(IPAddress.IPv6Any, 0)
+                //).ConfigureAwait(false);
 
                 // 直接处理数据（示例：原样回传）
                 await channel.Writer.WriteAsync(new UdpInfo(buffer, result.ReceivedBytes, result.RemoteEndPoint)).ConfigureAwait(false);

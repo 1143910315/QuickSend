@@ -40,7 +40,6 @@
                                 Text="{Binding Name}"
                                 FontSize="16"
                                 VerticalOptions="Center" />
-
                             <Switch
                                 Grid.Column="1"
                                 IsToggled="{Binding Trusted, Mode=TwoWay}"></Switch>
@@ -49,7 +48,5 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
         </ScrollView>
-
     </Grid>
-
 </ContentPage>

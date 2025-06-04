@@ -29,7 +29,6 @@ namespace QuickSend.Network.Data {
             if (data.Length == 0) {
                 return;
             }
-
             byte packetType = data[0];
             int packetLength = BitConverter.ToInt32(data[1..]);
             const int headerLength = 1 + sizeof(int);
