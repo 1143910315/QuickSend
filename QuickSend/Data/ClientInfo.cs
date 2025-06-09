@@ -12,6 +12,7 @@ namespace QuickSend.Data {
         private string name = "未命名设备";
         private readonly ConcurrentDictionary<int, Action<bool>> confirmActions = new();
         private int _nextId = 0; // ID 计数器
+        private readonly ConcurrentDictionary<int, FileData> fileManager = new();
 
         public IPEndPoint IpEndPoint {
             get => ipEndPoint;
@@ -24,6 +25,9 @@ namespace QuickSend.Data {
             get => name;
             set => name = value;
         }
+
+        public ConcurrentDictionary<int, FileData> FileManager => fileManager;
+
         public int AddConfirmAction(Action<bool> action) {
             while (confirmActions.TryAdd(++_nextId, action)) {
             }

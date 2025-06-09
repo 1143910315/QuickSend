@@ -78,8 +78,8 @@ namespace QuickSend.Network.Udp {
         }
 
         // 异步发送（使用原始内存块）
-        public ValueTask<int> SendAsync(Memory<byte> data, EndPoint remoteEP) {
-            return _socket.SendToAsync(data, SocketFlags.None, remoteEP);
+        public ValueTask<int> SendAsync(Memory<byte> data, EndPoint remoteEP, CancellationToken cancellationToken = default) {
+            return _socket.SendToAsync(data, SocketFlags.None, remoteEP, cancellationToken);
         }
 
         public void Dispose() {

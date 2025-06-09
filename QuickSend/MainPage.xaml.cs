@@ -21,6 +21,7 @@ namespace QuickSend {
             PacketHandlerRegistry.Initialize();
             PacketHandlerRegistry.Subscribe<HelloPacket, IPEndPoint>(HelloPacketProcessor);
             PacketHandlerRegistry.Subscribe<ConfirmPacket, IPEndPoint>(ConfirmPacketProcessor);
+            PacketHandlerRegistry.Subscribe<PreparePacket, IPEndPoint>(PreparePacketProcessor);
             DeviceNameEditor.Text = Preferences.Get("DeviceID", $"{DeviceInfo.Current.Name} - {DeviceInfo.Current.Idiom}");
             timer = new() {
                 Interval = 3000,
@@ -30,6 +31,16 @@ namespace QuickSend {
             timer.Start();
             udpHighPerfServer.OnReceived += UdpHighPerfServer_OnReceived;
             udpHighPerfServer.Start();
+        }
+
+        private void PreparePacketProcessor(PreparePacket packet, IPEndPoint? point) {
+            ClientInfo? clientInfo;
+            lock (HostList) {
+                clientInfo = HostList.FirstOrDefault(x => x.IpEndPoint == point);
+            }
+            if (clientInfo != null) {
+                clientInfo.FileManager[packet.ConfirmId] = new FileData(packet.FileName, packet.FileSize);
+            }
         }
 
         private void ConfirmPacketProcessor(ConfirmPacket packet, IPEndPoint? point) {
@@ -90,8 +101,8 @@ namespace QuickSend {
                 await Parallel.ForEachAsync(sendClientInfo, async (tuple, token) => {
                     try {
                         while (!tuple.Item2.IsCancellationRequested) {
-                            await udpHighPerfServer.SendAsync(PacketHandlerRegistry.Encode(new PreparePacket(fileLength, fileResult.FileName)), tuple.Item1.IpEndPoint).ConfigureAwait(false);
-                            await Task.Delay(5000, token).ConfigureAwait(false);
+                            await udpHighPerfServer.SendAsync(PacketHandlerRegistry.Encode(new PreparePacket(tuple.Item3, fileLength, fileResult.FileName)), tuple.Item1.IpEndPoint, tuple.Item2.Token).ConfigureAwait(false);
+                            await Task.Delay(5000, tuple.Item2.Token).ConfigureAwait(false);
                         }
                     } finally {
                     }
